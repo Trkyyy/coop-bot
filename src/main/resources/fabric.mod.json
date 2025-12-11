@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "coop-bot",
+	"version": "${version}",
+    "name": "Coop Bot",
+    "description": "A basic integration between the Coop minecraft server and it's #Crafters discord channel",
+    "authors": ["Trko"],
+    "contact": {
+      "homepage": "https://github.com/Trkyyy/coop-bot",
+      "sources": "https://github.com/Trkyyy/coop-bot"
+    },
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"server": [
+            "com.coop.bot.CoopBot"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.18.2",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
