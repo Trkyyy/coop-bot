@@ -10,8 +10,9 @@ public class CoopBot implements DedicatedServerModInitializer {
     public static final String MOD_ID = "coop-bot";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static DiscordWebhook discordWebhook;
     private static ModConfig config;
+    private static DiscordBotManager discordBotManager;
+    private DiscordWebhook shutdownWebhook;
 
     @Override
     public void onInitializeServer() {
@@ -20,35 +21,41 @@ public class CoopBot implements DedicatedServerModInitializer {
         // Load configuration
         config = ModConfig.load();
 
-        // Initialize Discord webhook sender
-        discordWebhook = new DiscordWebhook(config.getWebhookUrl());
+        // Set webhook for shutdown message
+        if (!config.getDiscordWebhookUrl().isEmpty()) {
+            this.shutdownWebhook = new DiscordWebhook(config.getDiscordWebhookUrl());
 
-        // Register event listeners
-        EventListener.registerEvents(discordWebhook, config);
+            ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+                try {
+                    shutdownWebhook.sendMessage("🔴 **Minecraft Server is stopping...** O.o");
+                } catch (Exception e) {
+                    LOGGER.error("Failed to send server stop message: " + e.getMessage());
+                }
 
-        // Register server start/stop events
+                discordBotManager.shutdown();
+            });
+        } else {
+            LOGGER.error("discordWebhookUrl constant is empty. Shutdown messages will not be sent.");
+        }
+
+        // Initialize Discord bot manager
+        discordBotManager = new DiscordBotManager(config);
+
+        // Register server lifecycle events
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            try {
-                discordWebhook.sendMessage("🟢 **Minecraft Server has started!** \n yahoo \n ┌( ͝° ͜ʖ͡°)=ε/̵͇̿̿/’̿’̿ ̿");
-            } catch (Exception e) {
-                LOGGER.error("Failed to send server start message: " + e.getMessage());
-            }
-
+            discordBotManager.setMinecraftServer(server);
+            discordBotManager.startBot();
         });
 
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
-            try {
-                discordWebhook.sendMessage("🔴 **Minecraft Server is stopping...** O.o");
-            } catch (Exception e) {
-                LOGGER.error("Failed to send server stop message: " + e.getMessage());
-            }
-        });
+
+
+        EventListener.registerEvents(discordBotManager, config);
 
         LOGGER.info("CoopBot mod initialized successfully \t( 0 _ 0 )");
     }
 
-    public static DiscordWebhook getDiscordWebhook() {
-        return discordWebhook;
+    public static DiscordBotManager getDiscordBotManager() {
+        return discordBotManager;
     }
 
     public static ModConfig getConfig() {

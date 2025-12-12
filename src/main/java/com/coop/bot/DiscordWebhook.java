@@ -27,7 +27,7 @@ public class DiscordWebhook {
         }
         // Create JSON object
         JsonObject json = new JsonObject();
-        json.addProperty("content", escapeMarkdown(content));
+        json.addProperty("content", content);
 
         // Convert to JSON string
         String jsonPayload = GSON.toJson(json);
@@ -47,16 +47,5 @@ public class DiscordWebhook {
             System.err.println("Failed to send message to Discord. Status: " + response.statusCode());
             System.err.println("Response: " + response.body());
         }
-    }
-
-    public static String escapeMarkdown(String text) {
-        if (text == null) return "";
-        return text
-                .replace("_", "\\_")
-                .replace("*", "\\*")
-                .replace("~", "\\~")
-                .replace("`", "\\`")
-                .replace(">", "\\>")
-                .replace("|", "\\|");
     }
 }

@@ -14,11 +14,11 @@ import org.slf4j.LoggerFactory;
 
 public class EventListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("CoopBot-EventListener");
-    private static DiscordWebhook discordWebhook;
+    private static DiscordBotManager discordBotManager;
     private static ModConfig config;
 
-    public static void registerEvents(DiscordWebhook webhook, ModConfig cfg) {
-        discordWebhook = webhook;
+    public static void registerEvents(DiscordBotManager manager, ModConfig cfg) {
+        discordBotManager = manager;
         config = cfg;
 
         // Register player join event
@@ -45,7 +45,7 @@ public class EventListener {
                 .replace("{player}", playerName);
 
         try {
-            discordWebhook.sendMessage(message);
+            discordBotManager.sendToDiscord(message);
             LOGGER.info("Sent join message for player: " + playerName);
         } catch (Exception e) {
             LOGGER.error("Failed to send join message: " + e.getMessage());
@@ -58,7 +58,7 @@ public class EventListener {
                 .replace("{player}", playerName);
 
         try {
-            discordWebhook.sendMessage(message);
+            discordBotManager.sendToDiscord(message);
             LOGGER.info("Sent leave message for player: " + playerName);
         } catch (Exception e) {
             LOGGER.error("Failed to send leave message: " + e.getMessage());
@@ -77,7 +77,7 @@ public class EventListener {
                 .replace("{message}", deathMessage);
 
         try {
-            discordWebhook.sendMessage(message);
+            discordBotManager.sendToDiscord(message);
             LOGGER.info("Sent death message for player: " + playerName);
         } catch (Exception e) {
             LOGGER.error("Failed to send death message: " + e.getMessage());
@@ -92,7 +92,7 @@ public class EventListener {
                 .replace("{player}", playerName)
                 .replace("{message}", messageBody);
         try {
-            discordWebhook.sendMessage(sentMessage);
+            discordBotManager.sendToDiscord(sentMessage);
             LOGGER.info("Sent chat message for player: " + playerName);
         } catch (Exception e) {
             LOGGER.error("Failed to send chat message: " + e.getMessage());

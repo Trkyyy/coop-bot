@@ -10,11 +10,14 @@ import java.nio.file.Path;
 
 public class ModConfig {
     // Configuration values with defaults
-    private String webhookUrl = "";
+    private String discordBotToken = "";
     private String joinMessageFormat = "🟢 {player} joined the game. Everyone say 'Hello there, {player}'";
     private String leaveMessageFormat = "🔴 {player} left the game. Everyone say 'Goodbye there, {player}'";
     private String deathMessageFormat = "💀 {message}";
     private String chatMessageFormat = "\uD83D\uDC72 {player}: {message}";
+    private String discordChannelId = "discordChannelId";
+    private String discordToMinecraftFormat = "[Discord] {user}: {message}";
+    private String discordWebhookUrl = "";
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_PATH = Path.of("config", "coop-bot.json");
@@ -54,15 +57,12 @@ public class ModConfig {
     }
 
     // Getters
-    public String getWebhookUrl() { return webhookUrl; }
+    public String getDiscordBotToken() { return discordBotToken; }
     public String getJoinMessageFormat() { return joinMessageFormat; }
     public String getLeaveMessageFormat() { return leaveMessageFormat; }
     public String getDeathMessageFormat() { return deathMessageFormat; }
     public String getChatMessageFormat() { return chatMessageFormat; }
-
-    // Setters (optional)
-    public void setWebhookUrl(String webhookUrl) {
-        this.webhookUrl = webhookUrl;
-        save();
-    }
+    public String getDiscordChannelId() { return discordChannelId; }
+    public String getDiscordToMinecraftFormat() { return discordToMinecraftFormat; }
+    public String getDiscordWebhookUrl() { return discordWebhookUrl; }
 }

@@ -11,11 +11,8 @@ base {
 }
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+    maven { url 'https://m2.dv8tion.net/releases' }
+    mavenCentral()
 }
 
 loom {
@@ -51,11 +48,38 @@ dependencies {
     implementation "org.slf4j:slf4j-api:2.0.13"
     include "org.slf4j:slf4j-api:2.0.13"
 
-    implementation 'com.github.niwla23:rcon-client:1.0.0'
-
     implementation("net.dv8tion:JDA:5.0.0-beta.20") {
         exclude module: 'opus-java'
     }
+    include("net.dv8tion:JDA:5.0.0-beta.20")
+
+    implementation 'org.apache.commons:commons-collections4:4.4'
+    include 'org.apache.commons:commons-collections4:4.4'
+
+    implementation 'net.sf.trove4j:trove4j:3.0.3'
+    include 'net.sf.trove4j:trove4j:3.0.3'
+
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    include 'com.squareup.okhttp3:okhttp:4.11.0'
+
+    implementation 'com.squareup.okio:okio-jvm:3.2.0'
+    include 'com.squareup.okio:okio-jvm:3.2.0'
+
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.0'
+    include 'org.jetbrains.kotlin:kotlin-stdlib:1.9.0'
+
+    implementation 'com.neovisionaries:nv-websocket-client:2.14'
+    include 'com.neovisionaries:nv-websocket-client:2.14'
+
+    // No idea if these are needed, but server has been failing to start for 2 hours, so adding them all to be safe
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    include 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    include 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+    include 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
 }
 
 processResources {
