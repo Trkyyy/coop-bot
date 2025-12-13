@@ -2,7 +2,8 @@ name: Build and Release Fabric Mod
 
 on:
   push:
-    branches: [ main, master ]
+    tags:
+      - 'v*'  # Only trigger on version tags like v1.0.0, v1.2.3, etc.
   pull_request:
     branches: [ main, master ]
 
@@ -22,8 +23,6 @@ jobs:
         
     - name: Validate Gradle Wrapper
       uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: wrapper
         
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -31,17 +30,9 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
       
-    - name: Create artifacts directory
-      run: mkdir -p artifacts
-      
-    - name: Copy and rename JAR file
+    - name: Create zip package
       run: |
-        # Adjust this path based on your mod's build location
-        # Common Fabric mod output locations:
-        # - build/libs/*.jar
-        # - fabric/build/libs/*.jar (for multi-project setups)
-        
-        # Find the main JAR file (excluding -dev, -sources, -javadoc jars)
+        # Find the main JAR file
         JAR_FILE=$(find build/libs -name "*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
         
         if [ -z "$JAR_FILE" ]; then
@@ -49,33 +40,13 @@ jobs:
           exit 1
         fi
         
-        # Get mod name and version from JAR filename or build.gradle
-        # You can customize the zip filename format here
+        # Get mod name and use tag for version
         MOD_NAME=$(basename $JAR_FILE .jar)
-        ZIP_NAME="${MOD_NAME}.zip"
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        ZIP_NAME="${MOD_NAME}-${TAG_NAME}.zip"
         
         # Create zip with the JAR file
-        zip -j "artifacts/${ZIP_NAME}" "$JAR_FILE"
-        
-        echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
-        echo "JAR_FILE=${JAR_FILE}" >> $GITHUB_ENV
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: fabric-mod-package
-        path: artifacts/
-        
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
-    steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: fabric-mod-package
+        zip -j "$ZIP_NAME" "$JAR_FILE"
         
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
