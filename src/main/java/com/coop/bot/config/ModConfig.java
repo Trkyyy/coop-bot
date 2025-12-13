@@ -11,13 +11,15 @@ import java.nio.file.Path;
 public class ModConfig {
     // Configuration values with defaults
     private String discordBotToken = "";
-    private String joinMessageFormat = "🟢 {player} joined the game. Everyone say 'Hello there, {player}'";
-    private String leaveMessageFormat = "🔴 {player} left the game. Everyone say 'Goodbye there, {player}'";
+    private String joinMessageFormat = "\uD83D\uDD25 {player} joined the server.";
+    private String leaveMessageFormat = "🔴 {player} left the server.";
     private String deathMessageFormat = "💀 {message}";
     private String chatMessageFormat = "\uD83D\uDC72 {player}: {message}";
-    private String discordChannelId = "discordChannelId";
+    private String discordChannelId = "";
+    private String discordMobChannelId = "";
     private String discordToMinecraftFormat = "[Discord] {user}: {message}";
     private String discordWebhookUrl = "";
+
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_PATH = Path.of("config", "coop-bot.json");
@@ -63,6 +65,7 @@ public class ModConfig {
     public String getDeathMessageFormat() { return deathMessageFormat; }
     public String getChatMessageFormat() { return chatMessageFormat; }
     public String getDiscordChannelId() { return discordChannelId; }
+    public String getDiscordMobChannelId() { return discordMobChannelId; }
     public String getDiscordToMinecraftFormat() { return discordToMinecraftFormat; }
     public String getDiscordWebhookUrl() { return discordWebhookUrl; }
 }

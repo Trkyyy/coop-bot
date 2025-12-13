@@ -30,7 +30,7 @@ public class EventListener {
             onPlayerLeave(handler.player);
         });
 
-        ServerLivingEntityEvents.AFTER_DEATH.register(EventListener::onPlayerDeath);
+        ServerLivingEntityEvents.AFTER_DEATH.register(EventListener::onEntityDeath);
 
         ServerMessageEvents.CHAT_MESSAGE.register((message, sender, typeKey) -> {
            onChatMessage(message, sender);
@@ -65,7 +65,7 @@ public class EventListener {
         }
     }
 
-    public static void onPlayerDeath(LivingEntity entity, DamageSource source) {
+    public static void onEntityDeath(LivingEntity entity, DamageSource source) {
         String playerName = entity.getName().getString();
 
         // Get the death message from the game
@@ -77,7 +77,7 @@ public class EventListener {
                 .replace("{message}", deathMessage);
 
         try {
-            discordBotManager.sendToDiscord(message);
+            discordBotManager.sendToDiscord(message, true);
             LOGGER.info("Sent death message for player: " + playerName);
         } catch (Exception e) {
             LOGGER.error("Failed to send death message: " + e.getMessage());
