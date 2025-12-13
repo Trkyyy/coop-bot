@@ -176,8 +176,10 @@ public class DiscordBotManager extends ListenerAdapter {
             event.reply("❌ **Server not available**").setEphemeral(true).queue();
             return;
         }
+        LOGGER.info("Info command requested, processing");
         String info = formatServerInfo();
         event.reply(info).queue();
+        LOGGER.info("Completed processing info command.");
     }
 
     // ---------------
@@ -220,7 +222,7 @@ public class DiscordBotManager extends ListenerAdapter {
         StringBuilder info = new StringBuilder();
         info.append("## Minecraft Server Info\n\n");
         info.append("### \uD83D\uDC72 Players\n");
-        info.append(String.format("-# %d online\n", playerCount));
+        info.append(String.format("-# %s online\n", playerCount));
         if (playerCount > 0) {
             List<String> players = minecraftServer.getPlayerManager().getPlayerList()
                     .stream()
@@ -228,7 +230,7 @@ public class DiscordBotManager extends ListenerAdapter {
                     .collect(Collectors.toList());
             players.forEach((player) -> {
                 // like `   - Trko__ {new line}`
-                info.append(String.format("• %d\n", player));
+                info.append(String.format("• %s\n", player));
             });
         }
         info.append("\n\n");
