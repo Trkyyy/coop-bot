@@ -1,0 +1,76 @@
+name: Build and Attach to Release
+
+on:
+  release:
+    types: [created, edited]  # Triggers when a release is created or edited
+
+jobs:
+  build-and-attach:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Validate Gradle Wrapper
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: wrapper
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build with Gradle
+      run: ./gradlew build
+      
+    - name: Create release package
+      run: |
+        # Find the main JAR file
+        JAR_FILE=$(find build/libs -name "*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
+        
+        if [ -z "$JAR_FILE" ]; then
+          echo "No JAR file found!"
+          exit 1
+        fi
+        
+        # Get mod name from JAR file
+        MOD_NAME=$(basename $JAR_FILE .jar)
+        
+        # Use release tag name for version
+        RELEASE_TAG=${GITHUB_REF#refs/tags/}
+        
+        # Clean the tag name (remove 'v' prefix if present for filename)
+        if [[ $RELEASE_TAG == v* ]]; then
+          VERSION=${RELEASE_TAG:1}
+        else
+          VERSION=$RELEASE_TAG
+        fi
+        
+        # Create zip file name
+        ZIP_NAME="${MOD_NAME}-${VERSION}.zip"
+        
+        # Create zip with the JAR file
+        zip -j "$ZIP_NAME" "$JAR_FILE"
+        
+        # Optionally, also create a standalone JAR file with version in name
+        JAR_WITH_VERSION="${MOD_NAME}-${VERSION}.jar"
+        cp "$JAR_FILE" "$JAR_WITH_VERSION"
+        
+        echo "ARTIFACT_ZIP=$ZIP_NAME" >> $GITHUB_ENV
+        echo "ARTIFACT_JAR=$JAR_WITH_VERSION" >> $GITHUB_ENV
+        
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          *.zip
+          *.jar
+        tag_name: ${{ github.event.release.tag_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
