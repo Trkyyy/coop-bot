@@ -1,27 +1,46 @@
-name: Build CoopBot
+name: Build and Release
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  release:
+    types: [created] # This triggers the workflow when a new release is created
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      # 1. checkout
       - uses: actions/checkout@v4
-      # 2. configure java
-      - name: Java config
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-      # 3. gradle
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582
-      # 4. run build
+        uses: gradle/actions/setup-gradle@v4.4.2
       - name: Build with Gradle
         run: ./gradlew build
+      # Upload the built JAR as a workflow artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mod-jar
+          path: build/libs/*.jar
+  # This second job only runs for releases and attaches the JAR
+  upload-release-asset:
+    needs: build # Waits for the 'build' job to finish
+    if: github.event_name == 'release' # Only runs for release events
+    runs-on: ubuntu-latest
+    steps:
+      # Download the artifact from the build job
+      - uses: actions/download-artifact@v4
+        with:
+          name: mod-jar
+      # Upload the JAR to the GitHub Release
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./*.jar
+          asset_name: coop-bot-${GITHUB_REF_NAME}.jar # Names it with the tag, e.g., 'coop-bot-v1.0.0.jar'
+          asset_content_type: application/java-archive
