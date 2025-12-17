@@ -80,6 +80,10 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
     include 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+
+    // SQLite database
+    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+    include 'org.xerial:sqlite-jdbc:3.44.1.0'
 }
 
 processResources {

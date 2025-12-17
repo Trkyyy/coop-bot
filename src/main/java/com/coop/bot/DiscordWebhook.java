@@ -7,11 +7,14 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DiscordWebhook {
     private final String webhookUrl;
     private final HttpClient httpClient;
     private static final Gson GSON = new Gson();
+    private static final Logger LOGGER = LoggerFactory.getLogger("Chicken-Bot");
 
     public DiscordWebhook(String webhookUrl) {
         this.webhookUrl = webhookUrl;
@@ -31,7 +34,7 @@ public class DiscordWebhook {
 
         // Convert to JSON string
         String jsonPayload = GSON.toJson(json);
-        System.out.println("Sending this JSON to Discord: " + jsonPayload);
+        LOGGER.info("Sending this JSON to Discord: " + jsonPayload);
 
         // Build and send the HTTP POST request
         HttpRequest request = HttpRequest.newBuilder()
@@ -44,8 +47,8 @@ public class DiscordWebhook {
 
         // Check the response status
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            System.err.println("Failed to send message to Discord. Status: " + response.statusCode());
-            System.err.println("Response: " + response.body());
+            LOGGER.error("Failed to send message to Discord. Status: " + response.statusCode());
+            LOGGER.error("Response: " + response.body());
         }
     }
 }

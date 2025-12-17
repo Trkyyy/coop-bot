@@ -19,6 +19,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Text;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class DiscordBotManager extends ListenerAdapter {
@@ -35,7 +37,7 @@ public class DiscordBotManager extends ListenerAdapter {
         this.config = config;
         this.generalChannelId = config.getDiscordChannelId();
         this.mobChannelId = config.getDiscordMobChannelId();
-        this.serverStartTime = serverStartTime = System.currentTimeMillis();;
+        this.serverStartTime = System.currentTimeMillis();;
     }
 
     // Setters
@@ -135,7 +137,7 @@ public class DiscordBotManager extends ListenerAdapter {
             );
         }
     }
-
+    // mob = false by default
     public void sendToDiscord(String message) {
         sendToDiscord(message, false);
     }
@@ -243,6 +245,33 @@ public class DiscordBotManager extends ListenerAdapter {
     }
 
     public static String escapeMarkdown(String text) {
+        if (text == null) return "";
+
+        // Don't escape Discord timestamp format: <t:timestamp:R>
+        // Don't escape custom emoji format: <:name:id>
+        // Don't escape animated emoji format: <a:name:id>
+
+        // Use regex to find Discord special tags and protect them
+        StringBuilder result = new StringBuilder();
+        Pattern pattern = Pattern.compile("(<[tT]:\\d+:[A-Za-z]>|<a?:\\w+:\\d+>)");
+        Matcher matcher = pattern.matcher(text);
+
+        int lastIndex = 0;
+        while (matcher.find()) {
+            // Escape text before the Discord tag
+            result.append(escapePlainMarkdown(text.substring(lastIndex, matcher.start())));
+            // Add the Discord tag without escaping
+            result.append(matcher.group());
+            lastIndex = matcher.end();
+        }
+
+        // Escape any remaining text
+        result.append(escapePlainMarkdown(text.substring(lastIndex)));
+
+        return result.toString();
+    }
+
+    private static String escapePlainMarkdown(String text) {
         if (text == null) return "";
         return text
                 .replace("_", "\\_")
