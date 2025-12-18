@@ -232,9 +232,18 @@ public class DiscordBotManager extends ListenerAdapter {
             event.reply("❌ **Server not available**").setEphemeral(true).queue();
             return;
         }
+
         LOGGER.info("Info command requested, processing");
+
+        // Defer the reply immediately to extend the timeout
+        event.deferReply().queue();
+
+        // Now do your processing
         String info = formatServerInfo();
-        event.reply(info).queue();
+
+        // Send the actual reply
+        event.getHook().editOriginal(info).queue();
+
         LOGGER.info("Completed processing info command.");
     }
 
