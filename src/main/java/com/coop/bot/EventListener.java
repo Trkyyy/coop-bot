@@ -1,6 +1,7 @@
 package com.coop.bot;
 
 import com.coop.bot.config.ModConfig;
+import com.coop.bot.objects.DeathRecord;
 import  net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
@@ -8,18 +9,20 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 public class EventListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("CoopBot-EventListener");
     private static DiscordBotManager discordBotManager;
     private static ModConfig config;
+    private static DeathTracking deathTracking;
 
-    public static void registerEvents(DiscordBotManager manager, ModConfig cfg) {
+    public static void intialize(DiscordBotManager manager, ModConfig cfg, DeathTracking deathTrck ) {
         discordBotManager = manager;
         config = cfg;
+        deathTracking = deathTrck;
 
         // Register player join event
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -66,19 +69,22 @@ public class EventListener {
     }
 
     public static void onEntityDeath(LivingEntity entity, DamageSource source) {
-        String playerName = entity.getName().getString();
-
-        // Get the death message from the game
-        Text deathText = source.getDeathMessage(entity);
-        String deathMessage = deathText != null ? deathText.getString() : "died";
-
-        // Format the message
-        String message = config.getDeathMessageFormat()
-                .replace("{message}", deathMessage);
-
+        // DeathRecord and DeathTracking
         try {
-            discordBotManager.sendToDiscord(message, true);
-            LOGGER.info("Sent death message for player: " + playerName);
+            DeathRecord deathRecord = DeathTracking.createDeathRecord(entity, source);
+            boolean shouldSendDeathMessage = deathTracking.recordDeath(deathRecord);
+
+            if (shouldSendDeathMessage) {
+                String deathMessage = DeathTracking.getDeathMessage(entity, source);
+                String message = config.getDeathMessageFormat()
+                        .replace("{message}", deathMessage);
+
+                discordBotManager.sendToDiscord(message, true);
+                LOGGER.info("Sent death message for: " + entity.getName().getString());
+            } else {
+                LOGGER.debug("Suppressed death message (farming detected): " + entity.getName().getString());
+            }
+
         } catch (Exception e) {
             LOGGER.error("Failed to send death message: " + e.getMessage());
         }

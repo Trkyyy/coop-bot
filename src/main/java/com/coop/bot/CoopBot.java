@@ -13,12 +13,13 @@ public class CoopBot implements DedicatedServerModInitializer {
     private static ModConfig config;
     private static DiscordBotManager discordBotManager;
     private DiscordWebhook shutdownWebhook;
+    private DeathTracking deathTracking;
 
     @Override
     public void onInitializeServer() {
         LOGGER.info("Initializing CoopBot");
 
-        // Load configuration
+        // Load configurationD
         config = ModConfig.load();
 
         // Set webhook for shutdown message
@@ -48,8 +49,8 @@ public class CoopBot implements DedicatedServerModInitializer {
         });
 
 
-
-        EventListener.registerEvents(discordBotManager, config);
+        deathTracking = new DeathTracking(discordBotManager, config);
+        EventListener.intialize(discordBotManager, config, deathTracking);
 
         LOGGER.info("CoopBot mod initialized successfully \t( 0 _ 0 )");
     }
