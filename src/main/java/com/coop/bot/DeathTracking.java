@@ -4,6 +4,7 @@ import com.coop.bot.objects.DeathRecord;
 import com.coop.bot.config.ModConfig;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.text.Text;
@@ -20,6 +21,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static net.minecraft.entity.EntityType.*;
+
 
 public class DeathTracking {
     private final List<DeathRecord> deathHistory = new ArrayList<>();
@@ -33,6 +36,53 @@ public class DeathTracking {
     private static final long FARMING_CHECK_INTERVAL = 5; // Check every 5 seconds
     private static final long FARMING_INACTIVITY_THRESHOLD = 60; // 60 seconds
 
+    // This is the best I can do for mob xp atm
+    private static final Map<EntityType<?>, Integer> XP_VALUES = new IdentityHashMap<>();
+
+    static {
+        // Hostile Mobs (5 XP)
+        XP_VALUES.put(EntityType.ZOMBIE, 5);
+        XP_VALUES.put(EntityType.HUSK, 5);
+        XP_VALUES.put(EntityType.DROWNED, 5);
+        XP_VALUES.put(EntityType.ZOMBIFIED_PIGLIN, 5);
+        XP_VALUES.put(EntityType.ZOGLIN, 5);
+        XP_VALUES.put(EntityType.SKELETON, 5);
+        XP_VALUES.put(EntityType.STRAY, 5);
+        XP_VALUES.put(EntityType.WITHER_SKELETON, 5);
+        XP_VALUES.put(EntityType.CREEPER, 5);
+        XP_VALUES.put(EntityType.SPIDER, 5);
+        XP_VALUES.put(EntityType.CAVE_SPIDER, 5);
+        XP_VALUES.put(EntityType.ENDERMAN, 5);
+        XP_VALUES.put(EntityType.GHAST, 5);
+        XP_VALUES.put(EntityType.PIGLIN, 5);
+        XP_VALUES.put(EntityType.HOGLIN, 5);
+        XP_VALUES.put(EntityType.VINDICATOR, 5);
+        XP_VALUES.put(EntityType.PILLAGER, 5);
+        XP_VALUES.put(EntityType.WITCH, 5);
+        XP_VALUES.put(EntityType.PHANTOM, 5);
+        XP_VALUES.put(EntityType.SHULKER, 5);
+
+        // 10 XP mobs
+        XP_VALUES.put(EntityType.BLAZE, 10);
+        XP_VALUES.put(EntityType.GUARDIAN, 10);
+        XP_VALUES.put(EntityType.ELDER_GUARDIAN, 10);
+        XP_VALUES.put(EntityType.EVOKER, 10);
+
+        // Special XP values
+        XP_VALUES.put(EntityType.PIGLIN_BRUTE, 20);
+        XP_VALUES.put(EntityType.ENDERMITE, 3);
+        XP_VALUES.put(EntityType.SILVERFISH, 5);
+        XP_VALUES.put(EntityType.RAVAGER, 20);
+        XP_VALUES.put(EntityType.WITHER, 50);
+        XP_VALUES.put(EntityType.ENDER_DRAGON, 12000);
+        XP_VALUES.put(EntityType.WARDEN, 5);
+        XP_VALUES.put(EntityType.MAGMA_CUBE, 2);
+        XP_VALUES.put(EntityType.SLIME, 2);
+
+        // Note: Size-based mobs (Slime, Magma Cube) need special handling
+        // These values are just placeholders
+    }
+
     public DeathTracking(DiscordBotManager discordBot, ModConfig config) {
         this.discordBot = discordBot;
         this.config = config;
@@ -41,7 +91,7 @@ public class DeathTracking {
 
     // Boolean return = if message should send
     public boolean recordDeath(DeathRecord death) {
-        logDeath(death);
+        //logDeath(death); // Commenting this because it is spamming console a LOT 18/12/25
         deathHistory.add(death);
 
         // Check for farming
@@ -60,6 +110,7 @@ public class DeathTracking {
         DeathRecord.Builder builder = new DeathRecord.Builder()
                 .entityUUID(entity.getUuid())
                 .entityName(entity.getName().getString())
+                .entityType(entity.getType())
                 .deathMessage(getDeathMessage(entity, damageSource))
                 .damageSource(damageSource.getName());
 
@@ -79,18 +130,6 @@ public class DeathTracking {
             // TODO: test this deeply
             builder.killerName(damageSource.getSource().getName().getString());
             builder.killerType(damageSource.getSource().getType());
-        }
-
-        if (entity instanceof MobEntity mobEntity) {
-            // this is so jank
-            try {
-                Field experiencePointsField = MobEntity.class.getDeclaredField("experiencePoints");
-                experiencePointsField.setAccessible(true);
-                int xp = (int) experiencePointsField.get(mobEntity);
-                LOGGER.info("Entity dropped " + xp + " XP");
-            } catch (Exception e) {
-                LOGGER.error("Failed to get xp from death: " + e.getMessage());
-            }
         }
 
         return builder.build();
@@ -146,6 +185,7 @@ public class DeathTracking {
     public static class FarmingSession {
         private final String killerName;
         private final String entityName;
+        private final EntityType<?> entityType;
         private final UUID killerUUID;
         private final long startTime;
         private int killCount;
@@ -153,25 +193,20 @@ public class DeathTracking {
         private long lastKillTime;
         private boolean notificationSent;
 
-        public FarmingSession(String killerName, UUID killerUUID, String entityName) {
+        public FarmingSession(String killerName, UUID killerUUID, String entityName,  EntityType<?> entityType) {
             this.killerName = killerName;
             this.killerUUID = killerUUID;
             this.entityName = entityName;
+            this.entityType = entityType;
             this.startTime = Instant.now().getEpochSecond();
             this.lastKillTime = this.startTime;
             this.killCount = 1;
-            this.xpDropped = 0;
             this.notificationSent = false;
         }
 
-        public void recordKill(int xpDropped) {
+        public void recordKill() {
             this.killCount++;
             this.lastKillTime = Instant.now().getEpochSecond();
-            this.xpDropped += xpDropped;
-        }
-
-        public void recordKill() {
-            recordKill(0);
         }
 
         public boolean isActive() {
@@ -219,6 +254,7 @@ public class DeathTracking {
 
         public String getFormattedSummary() {
             long killsPerMinute = (killCount * 60) / Math.max(1, (lastKillTime - startTime));
+            int mobXpValue = getMobXpValue(entityType) * killCount;
             return String.format(
                     "**%s** farmed **%s**\n" +
                             "• Total Kills: %d\n" +
@@ -227,7 +263,7 @@ public class DeathTracking {
                             "• Rate: ~%d kills/min\n" +
                             "• Started: <t:%d:R>\n" +
                             "• Ended: <t:%d:R>",
-                    killerName, entityName, killCount, xpDropped, getFormattedDuration(),
+                    killerName, entityName, killCount, mobXpValue, getFormattedDuration(),
                     killsPerMinute, startTime, lastKillTime
             );
         }
@@ -245,11 +281,11 @@ public class DeathTracking {
         // Get or create farming session
         FarmingSession session = activeFarmingSessions.computeIfAbsent(
                 sessionKey,
-                k -> new FarmingSession(death.getKillerName(), death.getKillerUUID(), death.getEntityName())
+                k -> new FarmingSession(death.getKillerName(), death.getKillerUUID(), death.getEntityName(), death.getEntityType())
         );
 
         // Update session with new kill
-        session.recordKill(death.getXpDropped());
+        session.recordKill();
 
         boolean shouldSendDeathMessage = true;
 
@@ -361,6 +397,10 @@ public class DeathTracking {
         } catch (Exception e) {
             LOGGER.error("Failed to send farming summary: " + e.getMessage());
         }
+    }
+
+    private static int getMobXpValue(EntityType<?> entityType) {
+        return XP_VALUES.getOrDefault(entityType, 0);
     }
 
 }
