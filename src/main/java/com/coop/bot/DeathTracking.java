@@ -191,13 +191,6 @@ public class DeathTracking {
             return (killerUUID != null ? killerUUID.toString() : killerName) + ":" + entityName;
         }
 
-        public String getFormattedStartTime() {
-            long duration = Instant.now().getEpochSecond() - startTime;
-            long minutes = duration / 60;
-            long seconds = duration % 60;
-            return String.format("%d:%02d", minutes, seconds);
-        }
-
         public int getKillCount() {
             return killCount;
         }
@@ -326,7 +319,7 @@ public class DeathTracking {
                 // Remove from suppression tracking
                 recentlyNotifiedFarms.remove(entry.getKey());
 
-                // Only send summary if farming was detected (notification was sent)
+                // Only send summary if farming was detected
                 if (session.isNotificationSent()) {
                     sendFarmingSummary(session);
                 }
@@ -337,6 +330,7 @@ public class DeathTracking {
         }
     }
 
+    // TODO: Make this commit to a db
     public void cleanupOldSessions() {
         Iterator<Map.Entry<String, FarmingSession>> iterator = activeFarmingSessions.entrySet().iterator();
         long currentTime = Instant.now().getEpochSecond();

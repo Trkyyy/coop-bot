@@ -5,9 +5,6 @@
     import java.time.Instant;
     import java.util.UUID;
 
-    /**
-     * Compact class to store death details for Minecraft players
-     */
     public class DeathRecord {
         private final UUID entityUUID;
         private final String entityName;
@@ -21,7 +18,7 @@
         private final int xpDropped;
 
         /**
-         * Builder pattern for constructing DeathRecord
+         * Builder
          */
         public static class Builder {
 
