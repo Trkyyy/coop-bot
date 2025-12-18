@@ -8,6 +8,7 @@
     public class DeathRecord {
         private final UUID entityUUID;
         private final String entityName;
+        private final EntityType<?> entityType;
         private final long timestamp;
         private final String dimension;
         private final String deathMessage;
@@ -15,7 +16,6 @@
         private final String killerName;
         private final UUID killerUUID;
         private final EntityType<?> killerType;
-        private final int xpDropped;
 
         /**
          * Builder
@@ -25,6 +25,7 @@
             // Fields
             private UUID entityUUID;
             private String entityName;
+            private EntityType<?> entityType;
             private String dimension;
             private String killerName;
             private UUID killerUUID;
@@ -33,7 +34,6 @@
 
             // Optional
             private String damageSource = "";
-            private int xpDropped = 0;
 
             public Builder() {
             }
@@ -45,6 +45,11 @@
 
             public Builder entityName(String entityName) {
                 this.entityName = entityName;
+                return this;
+            }
+
+            public Builder entityType(EntityType<?> entityType) {
+                this.entityType = entityType;
                 return this;
             }
 
@@ -73,11 +78,6 @@
                 return this;
             }
 
-            public Builder xpDropped(int xpDropped) {
-                this.xpDropped = xpDropped;
-                return this;
-            }
-
 
             public DeathRecord build() {
                 return new DeathRecord(this);
@@ -87,6 +87,7 @@
         private DeathRecord(Builder builder) {
             this.entityUUID = builder.entityUUID;
             this.entityName = builder.entityName;
+            this.entityType = builder.entityType;
             this.timestamp = Instant.now().getEpochSecond();
             this.dimension = builder.dimension;
             this.deathMessage = builder.deathMessage;
@@ -94,12 +95,12 @@
             this.killerName = builder.killerName;
             this.killerUUID = builder.killerUUID;
             this.killerType = builder.killerType;
-            this.xpDropped = builder.xpDropped;
         }
 
         // Getters
         public UUID getEntityUUID() { return entityUUID; }
         public String getEntityName() { return entityName; }
+        public EntityType<?> getEntityType() { return entityType; }
         public long getTimestamp() { return timestamp; }
         public String getDimension() { return dimension; }
         public String getDeathMessage() { return deathMessage; }
@@ -107,13 +108,13 @@
         public String getKillerName() { return killerName; }
         public UUID getKillerUUID() { return killerUUID; }
         public EntityType<?> getKillerType() { return killerType; }
-        public int getXpDropped() { return xpDropped; }
 
         @Override
         public String toString() {
             return "DeathRecord{" +
                     "entityUUID=" + entityUUID +
                     ", entityName='" + entityName + '\'' +
+                    ", entityType=" + entityType +
                     ", timestamp=" + timestamp +
                     ", dimension='" + dimension + '\'' +
                     ", deathMessage='" + deathMessage + '\'' +
@@ -121,7 +122,6 @@
                     ", killerName='" + killerName + '\'' +
                     ", killerUUID=" + killerUUID +
                     ", killerType=" + killerType +
-                    ", xpDropped=" + xpDropped +
                     '}';
         }
     }
