@@ -3,6 +3,7 @@ package com.coop.bot;
 import com.coop.bot.config.ModConfig;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -12,11 +13,13 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
+
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -151,22 +154,73 @@ public class DiscordBotManager extends ListenerAdapter {
             return;
         }
         if (!event.isFromType(ChannelType.TEXT)) return;
-        String message = event.getMessage().getContentDisplay();
+
+        Message discordMessage = event.getMessage();
+        String message = discordMessage.getContentDisplay();
         String author = event.getAuthor().getName();
-        sendToMinecraft(author, message);
+
+        // Check if this message is a reply
+        String referencedMessage = null;
+        String referencedAuthor = null;
+
+        if (discordMessage.getMessageReference() != null) {
+            try {
+                Message referencedMsg = discordMessage.getMessageReference().resolve().complete();
+                if (referencedMsg != null) {
+                    referencedMessage = referencedMsg.getContentDisplay();
+                    referencedAuthor = referencedMsg.getAuthor().getName();
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Failed to resolve referenced message: " + e.getMessage());
+            }
+        }
+
+        sendToMinecraft(author, message, referencedAuthor, referencedMessage);
     }
 
-    private void sendToMinecraft(String author, String message) {
+    private void sendToMinecraft(String author, String message, String referencedAuthor, String referencedMessage) {
         if (minecraftServer == null) {
             LOGGER.error("Minecraft server not set!");
             return;
         }
-        String formatted = String.format("§9[Discord] §7%s: §f%s", author, message);
-        minecraftServer.getPlayerManager().broadcast(
-                Text.literal(formatted),
-                false
-        );
-        LOGGER.info("Discord -> Minecraft: " + author + ": " + message);
+
+        String formatted;
+
+        if (referencedMessage != null && referencedAuthor != null) {
+            // Format for replies
+            String truncatedRefMessage = referencedMessage;
+            if (truncatedRefMessage.length() > 50) {
+                truncatedRefMessage = truncatedRefMessage.substring(0, 47) + "...";
+            }
+
+            // Create the base text
+            formatted = String.format("§9[Discord] §7%s §8(↩ %s)§7: §f%s",
+                    author, referencedAuthor, message);
+
+
+            // Create hover text showing the full referenced message
+            // (hover text will only appear if the targeted message is moused over (the entire message))
+            Text hoverText = Text.literal("Replying to " + referencedAuthor + ": " + truncatedRefMessage)
+                    .formatted(Formatting.GRAY);
+
+            HoverEvent hoverEvent = new HoverEvent.ShowText(hoverText);
+
+            // Apply the hover event to the text
+            MutableText mainText = Text.literal(formatted)
+                    .styled(style -> style.withHoverEvent(hoverEvent));
+
+            minecraftServer.getPlayerManager().broadcast(mainText, false);
+
+        } else {
+            formatted = String.format("§9[Discord] §7%s: §f%s", author, message);
+            minecraftServer.getPlayerManager().broadcast(
+                    Text.literal(formatted),
+                    false
+            );
+        }
+
+        LOGGER.info("Discord -> Minecraft: " + author + ": " + message +
+                (referencedAuthor != null ? " (replying to " + referencedAuthor + ")" : ""));
     }
 
     // ---------------
