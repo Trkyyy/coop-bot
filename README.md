@@ -2,6 +2,8 @@
 
 **Coop Bot** integrates a Minecraft Fabric server with a Discord server to relay messages and events between them.
 
+This project is based on the [Fabric Develop boilerplate](https://fabricmc.net/develop/).
+
 **Note**: This plugin is designed specifically for my and my friends discord server, and uses emojis specific to that server. These emojis should still work on your server, but note they are not part of Discord's standard emoji library.
 
 ## Features
@@ -84,8 +86,3 @@ Note: Slash commands are registered to the guild associated with the `discordCha
 - Messages are formatted using the values in `ModConfig` and sent to Discord via JDA.
 - Deaths are recorded; repeated kills by the same player on the same mob are tracked as a farming session. When the session reaches a threshold (default: 10 kills), a farming notification is sent and individual death messages are suppressed until the session ends; then a summary is posted.
 - Discord messages can be relayed back into Minecraft chat. Replies are supported and include hover text showing the referenced message.
-
-
-## License
-This project is licensed as **CC0-1.0** (see `fabric.mod.json`).
-
