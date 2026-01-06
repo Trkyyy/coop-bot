@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.slf4j.Logger;
@@ -78,6 +79,13 @@ public class EventListener {
                 String deathMessage = DeathTracking.getDeathMessage(entity, source);
                 String message = config.getDeathMessageFormat()
                         .replace("{message}", deathMessage);
+
+                String coords = "";
+                if (entity instanceof PlayerEntity){
+                    coords = deathRecord.getDeathLocation();
+                }
+
+                message= message.replace("{coords}", coords);
 
                 discordBotManager.sendToDiscord(message, true);
                 LOGGER.info("Sent death message for: " + entity.getName().getString());

@@ -16,6 +16,9 @@
         private final String killerName;
         private final UUID killerUUID;
         private final EntityType<?> killerType;
+        private final double deathX;
+        private final double deathY;
+        private final double deathZ;
 
         /**
          * Builder
@@ -31,6 +34,9 @@
             private UUID killerUUID;
             private EntityType<?> killerType;
             private String deathMessage;
+            private double deathX;
+            private double deathY;
+            private double deathZ;
 
             // Optional
             private String damageSource = "";
@@ -78,6 +84,22 @@
                 return this;
             }
 
+            public Builder deathLocation(double x, double y, double z, String dimension) {
+                this.deathX = x;
+                this.deathY = y;
+                this.deathZ = z;
+                this.dimension = dimension;
+                return this;
+            }
+
+            public Builder deathLocation(double x, double y, double z) {
+                this.deathX = x;
+                this.deathY = y;
+                this.deathZ = z;
+                this.dimension = "Unknown Dimension";
+                return this;
+            }
+
 
             public DeathRecord build() {
                 return new DeathRecord(this);
@@ -95,6 +117,9 @@
             this.killerName = builder.killerName;
             this.killerUUID = builder.killerUUID;
             this.killerType = builder.killerType;
+            this.deathX = builder.deathX;
+            this.deathY = builder.deathY;
+            this.deathZ = builder.deathZ;
         }
 
         // Getters
@@ -108,6 +133,17 @@
         public String getKillerName() { return killerName; }
         public UUID getKillerUUID() { return killerUUID; }
         public EntityType<?> getKillerType() { return killerType; }
+        public double getDeathX() { return deathX; }
+        public double getDeathY() { return deathY; }
+        public double getDeathZ() { return deathZ; }
+
+        public String getDeathLocation() {
+            return String.format(" at [%.0f, %.0f, %.0f] in %s",
+                    this.getDeathX(),
+                    this.getDeathY(),
+                    this.getDeathZ(),
+                    this.getDimension());
+        }
 
         @Override
         public String toString() {
@@ -122,6 +158,9 @@
                     ", killerName='" + killerName + '\'' +
                     ", killerUUID=" + killerUUID +
                     ", killerType=" + killerType +
+                    ", deathX=" + deathX +
+                    ", deathY=" + deathY +
+                    ", deathZ=" + deathZ +
                     '}';
         }
     }

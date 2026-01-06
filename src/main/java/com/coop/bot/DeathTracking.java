@@ -114,6 +114,30 @@ public class DeathTracking {
                 .deathMessage(getDeathMessage(entity, damageSource))
                 .damageSource(damageSource.getName());
 
+        // Get coords
+        double x = entity.getX();
+        double y = entity.getY();
+        double z = entity.getZ();
+        String dimension;
+
+        if (entity.getEntityWorld() != null) {
+            dimension = entity.getEntityWorld().getRegistryKey().getValue().toString();
+            switch (dimension) {
+                case "minecraft:overworld":
+                    dimension = "Overworld";
+                    break;
+                case "minecraft:the_nether":
+                    dimension = "Nether";
+                    break;
+                case "minecraft:the_end":
+                    dimension = "End";
+                    break;
+            }
+            builder.deathLocation(x, y, z, dimension);
+        } else {
+            builder.deathLocation(x, y, z);
+        }
+
         // Handle killer information
         Entity attacker = damageSource.getAttacker();
         if (attacker != null) {

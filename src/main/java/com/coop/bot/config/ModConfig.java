@@ -13,7 +13,7 @@ public class ModConfig {
     private String discordBotToken = "";
     private String joinMessageFormat = "\uD83D\uDD25 {player} joined the server.";
     private String leaveMessageFormat = "🔴 {player} left the server.";
-    private String deathMessageFormat = "💀 {message}";
+    private String deathMessageFormat = "💀 {message}{coords}";
     private String chatMessageFormat = "\uD83D\uDC72 {player}: {message}";
     private String discordChannelId = "";
     private String discordMobChannelId = "";
