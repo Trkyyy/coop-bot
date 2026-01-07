@@ -58,7 +58,9 @@ The mod writes/reads a JSON config file at `config/coop-bot.json`. The following
 - `discordChannelId` — Channel ID used for general messages and slash commands.
 - `discordMobChannelId` — Channel ID used for death / mob notifications (farming messages posted here).
 - `discordWebhookUrl` (optional) — Webhook URL to post a server shutdown message.
-  - You can generate this as follows:
+ - `discordWebhookUrl` (optional) — Webhook URL to post server messages.
+  - If this is set, registered Minecraft players can have their chat messages posted using the webhook with their Discord username and avatar (see the Discord Commands section below).
+  - You can generate a webhook as follows:
     - Navigate to your server's settings > Integrations > Create Webhook
     - Change the name and channel of the webhook as desired
     - Copy Webhook URL
@@ -79,6 +81,19 @@ The mod writes/reads a JSON config file at `config/coop-bot.json`. The following
 4. Put the bot token in `config/coop-bot.json` (`discordBotToken`) and set the channel IDs.
 
 Note: Slash commands are registered to the guild associated with the `discordChannelId` when possible.
+
+## Discord Commands
+
+The bot now supports the following slash commands (registered into the configured `discordChannelId`):
+
+- `/register minecraft_username:<name>` — Register your Discord account to a Minecraft username. When that Minecraft player sends chat, messages will be posted using your Discord name and avatar (requires `discordWebhookUrl` to be set to impersonate the user via webhook).
+- `/registrations` — List all current registrations (ephemeral reply).
+- `/unregister minecraft_username:<name>` — Remove a registration for a Minecraft username (can only be removed by the Discord account that registered it).
+
+Notes:
+
+- If the `discordWebhookUrl` is not configured, registered names will still be shown but messages will be posted by the bot (avatar override requires webhook support).
+- Minecraft username validation allows letters, numbers and underscores with a max of 16 characters.
 
 
 ## How it works (high-level)

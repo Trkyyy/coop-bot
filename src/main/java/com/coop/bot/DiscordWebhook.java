@@ -51,4 +51,34 @@ public class DiscordWebhook {
             LOGGER.error("Response: " + response.body());
         }
     }
+
+    /**
+     * Send message using the webhook, optionally setting username and avatar.
+     */
+    public void sendMessage(String content, String username, String avatarUrl) throws Exception {
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content cannot be empty.");
+        }
+
+        JsonObject json = new JsonObject();
+        json.addProperty("content", content);
+        if (username != null && !username.isEmpty()) json.addProperty("username", username);
+        if (avatarUrl != null && !avatarUrl.isEmpty()) json.addProperty("avatar_url", avatarUrl);
+
+        String jsonPayload = GSON.toJson(json);
+        LOGGER.info("Sending this JSON to Discord webhook: " + jsonPayload);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(webhookUrl))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            LOGGER.error("Failed to send message to Discord webhook. Status: " + response.statusCode());
+            LOGGER.error("Response: " + response.body());
+        }
+    }
 }

@@ -11,6 +11,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.HoverEvent;
@@ -22,9 +23,12 @@ import org.slf4j.LoggerFactory;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.coop.bot.objects.RegisteredUser;
+import net.minecraft.server.network.ServerPlayerEntity;
 
 public class DiscordBotManager extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger("Chicken-Bot");
@@ -86,6 +90,15 @@ public class DiscordBotManager extends ListenerAdapter {
             case "info":
                 handleInfoCommand(event);
                 break;
+            case "registrations":
+                handleListRegistrationsCommand(event);
+                break;
+            case "register":
+                handleRegisterCommand(event);
+                break;
+            case "unregister":
+                handleUnregisterCommand(event);
+                break;
             default:
                 event.reply("Unknown command").setEphemeral(true).queue();
         }
@@ -98,6 +111,9 @@ public class DiscordBotManager extends ListenerAdapter {
                 channel.getGuild().updateCommands()
                         .addCommands(
                                 Commands.slash("info", "Show server information")
+                        ,Commands.slash("registrations", "List all registered Minecraft usernames")
+                    ,Commands.slash("register", "Register your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true)
+                    ,Commands.slash("unregister", "Unregister your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true)
                         )
                         .queue(
                                 success -> LOGGER.info("Slash commands registered successfully!"),
@@ -157,7 +173,15 @@ public class DiscordBotManager extends ListenerAdapter {
 
         Message discordMessage = event.getMessage();
         String message = discordMessage.getContentDisplay();
-        String author = event.getAuthor().getName();
+
+        // Use the member's nickname for display in Minecraft if present; otherwise use the effective name or username
+        String author;
+        if (event.getMember() != null) {
+            String nick = event.getMember().getNickname();
+            author = (nick != null && !nick.isEmpty()) ? nick : event.getMember().getEffectiveName();
+        } else {
+            author = event.getAuthor().getName();
+        }
 
         // Check if this message is a reply
         String referencedMessage = null;
@@ -168,7 +192,12 @@ public class DiscordBotManager extends ListenerAdapter {
                 Message referencedMsg = discordMessage.getMessageReference().resolve().complete();
                 if (referencedMsg != null) {
                     referencedMessage = referencedMsg.getContentDisplay();
-                    referencedAuthor = referencedMsg.getAuthor().getName();
+                    if (referencedMsg.getMember() != null) {
+                        String nick = referencedMsg.getMember().getNickname();
+                        referencedAuthor = (nick != null && !nick.isEmpty()) ? nick : referencedMsg.getMember().getEffectiveName();
+                    } else {
+                        referencedAuthor = referencedMsg.getAuthor().getName();
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.warn("Failed to resolve referenced message: " + e.getMessage());
@@ -245,6 +274,91 @@ public class DiscordBotManager extends ListenerAdapter {
         event.getHook().editOriginal(info).queue();
 
         LOGGER.info("Completed processing info command.");
+    }
+
+    private void handleRegisterCommand(SlashCommandInteractionEvent event) {
+        String mcUsername = event.getOption("minecraft_username").getAsString();
+        String discordId = event.getUser().getId();
+        // Persist the user's display name (effective name) rather than raw username or nickname
+        String discordName = (event.getMember() != null) ? event.getMember().getEffectiveName() : event.getUser().getName();
+        String avatarUrl = event.getUser().getEffectiveAvatarUrl();
+
+        // Basic validation for Minecraft username
+        if (!mcUsername.matches("^[A-Za-z0-9_]{1,16}$")) {
+            event.reply("❌ Invalid Minecraft username. Use 1-16 chars: letters, numbers and underscores only.").setEphemeral(true).queue();
+            return;
+        }
+
+        event.deferReply().setEphemeral(true).queue();
+
+        boolean ok = RegistrationStore.getInstance().register(mcUsername, discordId, discordName, avatarUrl);
+        if (!ok) {
+            event.getHook().editOriginal("❌ That Minecraft username is already registered to another Discord account.").queue();
+            return;
+        }
+
+        event.getHook().editOriginal("✅ Registered **" + mcUsername + "** to you (" + discordName + ")").queue();
+        LOGGER.info("Registered Minecraft user " + mcUsername + " to Discord user " + discordName + " (" + discordId + ")");
+    }
+
+    private void handleUnregisterCommand(SlashCommandInteractionEvent event) {
+        String mcUsername = event.getOption("minecraft_username").getAsString();
+        String discordId = event.getUser().getId();
+
+        event.deferReply().setEphemeral(true).queue();
+        boolean ok = RegistrationStore.getInstance().unregister(mcUsername, discordId);
+        if (!ok) {
+            event.getHook().editOriginal("❌ Could not unregister. Either it wasn't registered, or it is registered to a different Discord account.").queue();
+            return;
+        }
+        event.getHook().editOriginal("✅ Unregistered **" + mcUsername + "**").queue();
+        LOGGER.info("Unregistered Minecraft user " + mcUsername + " by Discord user " + discordId);
+    }
+
+    private void handleListRegistrationsCommand(SlashCommandInteractionEvent event) {
+        event.deferReply().setEphemeral(true).queue();
+
+        Map<String, RegisteredUser> regs = RegistrationStore.getInstance().listAll();
+        if (regs.isEmpty()) {
+            event.getHook().editOriginal("No registrations found.").queue();
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("**Registered Minecraft Users:**\n\n");
+        regs.values().forEach(r -> {
+            sb.append(String.format("- **%s** → %s (`%s`)\n", r.getMinecraftUsername(), r.getDiscordName(), r.getDiscordId()));
+        });
+
+        event.getHook().editOriginal(sb.toString()).queue();
+    }
+
+    public void sendMinecraftChatToDiscord(ServerPlayerEntity player, String messageBody) {
+        if (jda == null) return;
+
+        String playerName = player.getName().getString();
+        RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
+
+        try {
+            // If registered and webhook configured, use webhook to impersonate
+            if (reg != null && config.getDiscordWebhookUrl() != null && !config.getDiscordWebhookUrl().isEmpty()) {
+                DiscordWebhook webhook = new DiscordWebhook(config.getDiscordWebhookUrl());
+                webhook.sendMessage(messageBody, reg.getDiscordName(), reg.getAvatarUrl());
+                return;
+            }
+
+            // Otherwise, if registered but no webhook, fall back to sending as bot but use registered name
+            String formatted = config.getChatMessageFormat();
+            if (reg != null) {
+                formatted = formatted.replace("{player}", reg.getDiscordName()).replace("{message}", messageBody);
+            } else {
+                formatted = formatted.replace("{player}", playerName).replace("{message}", messageBody);
+            }
+
+            sendToDiscord(formatted);
+        } catch (Exception e) {
+            LOGGER.error("Failed to send Minecraft chat to Discord: " + e.getMessage());
+        }
     }
 
     // ---------------
