@@ -34,7 +34,15 @@ public class DiscordWebhook {
 
         // Convert to JSON string
         String jsonPayload = GSON.toJson(json);
-        LOGGER.info("Sending this JSON to Discord: " + jsonPayload);
+        // Avoid logging full payloads which may contain sensitive user data.
+        // If debug is enabled, log a redacted payload that omits content and avatar_url.
+        if (LOGGER.isDebugEnabled()) {
+            JsonObject redacted = new JsonObject();
+            redacted.addProperty("content", "[redacted]");
+            if (json.has("username")) redacted.addProperty("username", json.get("username").getAsString());
+            if (json.has("avatar_url")) redacted.addProperty("avatar_url", "[redacted]");
+            LOGGER.debug("Sending JSON to Discord webhook: {}", redacted.toString());
+        }
 
         // Build and send the HTTP POST request
         HttpRequest request = HttpRequest.newBuilder()
@@ -66,7 +74,13 @@ public class DiscordWebhook {
         if (avatarUrl != null && !avatarUrl.isEmpty()) json.addProperty("avatar_url", avatarUrl);
 
         String jsonPayload = GSON.toJson(json);
-        LOGGER.info("Sending this JSON to Discord webhook: " + jsonPayload);
+        if (LOGGER.isDebugEnabled()) {
+            JsonObject redacted = new JsonObject();
+            redacted.addProperty("content", "[redacted]");
+            if (json.has("username")) redacted.addProperty("username", json.get("username").getAsString());
+            if (json.has("avatar_url")) redacted.addProperty("avatar_url", "[redacted]");
+            LOGGER.debug("Sending JSON to Discord webhook: {}", redacted.toString());
+        }
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(webhookUrl))

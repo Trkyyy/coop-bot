@@ -87,7 +87,8 @@ public class RegistrationStore {
         return registrations.get(minecraftUsername.toLowerCase());
     }
 
-    public Map<String, RegisteredUser> listAll() {
-        return Collections.unmodifiableMap(registrations);
+    public synchronized Map<String, RegisteredUser> listAll() {
+        // Return a snapshot to avoid concurrent modification risks for callers iterating the map
+        return Collections.unmodifiableMap(new HashMap<>(registrations));
     }
 }
