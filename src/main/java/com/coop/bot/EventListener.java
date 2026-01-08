@@ -102,11 +102,8 @@ public class EventListener {
         String messageBody = message.getContent().getString();
         String playerName = sender.getName().getString();
 
-        String sentMessage =     config.getChatMessageFormat()
-                .replace("{player}", playerName)
-                .replace("{message}", messageBody);
         try {
-            discordBotManager.sendToDiscord(sentMessage);
+            discordBotManager.sendMinecraftChatToDiscord(sender, messageBody);
             LOGGER.info("Sent chat message for player: " + playerName);
         } catch (Exception e) {
             LOGGER.error("Failed to send chat message: " + e.getMessage());
