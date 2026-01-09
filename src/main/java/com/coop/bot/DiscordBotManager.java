@@ -29,6 +29,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import com.coop.bot.objects.RegisteredUser;
 import net.minecraft.server.network.ServerPlayerEntity;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DiscordBotManager extends ListenerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger("Chicken-Bot");
@@ -38,6 +40,8 @@ public class DiscordBotManager extends ListenerAdapter {
     private String generalChannelId;
     private String mobChannelId;
     private static long serverStartTime;
+    // Executor for background HTTP/webhook work so we don't block the server thread
+    private final ExecutorService webhookExecutor = Executors.newCachedThreadPool();
 
     // Intialise class
     public DiscordBotManager(ModConfig config) {
@@ -339,15 +343,23 @@ public class DiscordBotManager extends ListenerAdapter {
         String playerName = player.getName().getString();
         RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
 
-        try {
-            // If registered and webhook configured, use webhook to impersonate
-            if (reg != null && config.getDiscordWebhookUrl() != null && !config.getDiscordWebhookUrl().isEmpty()) {
-                DiscordWebhook webhook = new DiscordWebhook(config.getDiscordWebhookUrl());
-                webhook.sendMessage(messageBody, reg.getDiscordName(), reg.getAvatarUrl());
-                return;
-            }
+        // If registered and webhook configured, use webhook to impersonate but do it off-thread
+        if (reg != null && config.getDiscordWebhookUrl() != null && !config.getDiscordWebhookUrl().isEmpty()) {
+            DiscordWebhook webhook = new DiscordWebhook(config.getDiscordWebhookUrl());
+            // Submit the webhook send to the background executor so the server thread isn't blocked
+            webhookExecutor.submit(() -> {
+                try {
+                    webhook.sendMessage(messageBody, reg.getDiscordName(), reg.getAvatarUrl());
+                } catch (Exception e) {
+                    LOGGER.error("Failed to send Minecraft chat via webhook: " + e.getMessage());
+                }
+            });
+            // Return immediately to avoid blocking
+            return;
+        }
 
-            // Otherwise, if registered but no webhook, fall back to sending as bot but use registered name
+        // Otherwise, if registered but no webhook, fall back to sending as bot but use registered name
+        try {
             String formatted = config.getChatMessageFormat();
             if (reg != null) {
                 formatted = formatted.replace("{player}", reg.getDiscordName()).replace("{message}", messageBody);
@@ -488,6 +500,11 @@ public class DiscordBotManager extends ListenerAdapter {
         if (jda != null) {
             jda.shutdown();
             jda = null;
+        }
+        try {
+            webhookExecutor.shutdownNow();
+        } catch (Exception e) {
+            LOGGER.warn("Error shutting down webhook executor: " + e.getMessage());
         }
     }
 }
