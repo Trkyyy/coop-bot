@@ -41,7 +41,8 @@ public class DiscordBotManager extends ListenerAdapter {
     private String mobChannelId;
     private static long serverStartTime;
     // Executor for background HTTP/webhook work so we don't block the server thread
-    private final ExecutorService webhookExecutor = Executors.newCachedThreadPool();
+    // Set a reasonable limit on threads to avoid resource exhaustion
+    private final ExecutorService webhookExecutor = Executors.newFixedThreadPool(4);
 
     // Intialise class
     public DiscordBotManager(ModConfig config) {
@@ -345,13 +346,13 @@ public class DiscordBotManager extends ListenerAdapter {
 
         // If registered and webhook configured, use webhook to impersonate but do it off-thread
         if (reg != null && config.getDiscordWebhookUrl() != null && !config.getDiscordWebhookUrl().isEmpty()) {
-            DiscordWebhook webhook = new DiscordWebhook(config.getDiscordWebhookUrl());
             // Submit the webhook send to the background executor so the server thread isn't blocked
             webhookExecutor.submit(() -> {
                 try {
+                    DiscordWebhook webhook = new DiscordWebhook(config.getDiscordWebhookUrl());
                     webhook.sendMessage(messageBody, reg.getDiscordName(), reg.getAvatarUrl());
                 } catch (Exception e) {
-                    LOGGER.error("Failed to send Minecraft chat via webhook: " + e.getMessage());
+                    LOGGER.error("Failed to send Minecraft chat via webhook", e);
                 }
             });
             // Return immediately to avoid blocking
