@@ -87,6 +87,23 @@ public class RegistrationStore {
         return registrations.get(minecraftUsername.toLowerCase());
     }
 
+    public RegisteredUser getByDiscordId(String discordId) {
+        if (discordId == null) return null;
+        for (RegisteredUser user : registrations.values()) {
+            if (user.getDiscordId().equals(discordId)) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    public synchronized void updateUser(RegisteredUser user) {
+        if (user == null || user.getMinecraftUsername() == null) return;
+        String key = user.getMinecraftUsername().toLowerCase();
+        registrations.put(key, user);
+        save();
+    }
+
     public synchronized Map<String, RegisteredUser> listAll() {
         // Return a snapshot to avoid concurrent modification risks for callers iterating the map
         return Collections.unmodifiableMap(new HashMap<>(registrations));
