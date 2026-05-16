@@ -7,11 +7,13 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.HoverEvent;
@@ -104,8 +106,20 @@ public class DiscordBotManager extends ListenerAdapter {
             case "unregister":
                 handleUnregisterCommand(event);
                 break;
+            case "visibility":
+                handleVisibilityCommand(event);
+                break;
             default:
                 event.reply("Unknown command").setEphemeral(true).queue();
+        }
+    }
+
+    @Override
+    public void onButtonInteraction(ButtonInteractionEvent event) {
+        String buttonId = event.getComponentId();
+        
+        if (buttonId.startsWith("visibility_")) {
+            handleVisibilityButton(event);
         }
     }
 
@@ -115,10 +129,11 @@ public class DiscordBotManager extends ListenerAdapter {
             if (channel != null) {
                 channel.getGuild().updateCommands()
                         .addCommands(
-                                Commands.slash("info", "Show server information")
-                        ,Commands.slash("registrations", "List all registered Minecraft usernames")
-                    ,Commands.slash("register", "Register your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true)
-                    ,Commands.slash("unregister", "Unregister your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true)
+                                Commands.slash("info", "Show server information"),
+                                Commands.slash("registrations", "List all registered Minecraft usernames"),
+                                Commands.slash("register", "Register your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true),
+                                Commands.slash("unregister", "Unregister your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true),
+                                Commands.slash("visibility", "Control your visibility settings for Discord posting")
                         )
                         .queue(
                                 success -> LOGGER.info("Slash commands registered successfully!"),
@@ -338,11 +353,109 @@ public class DiscordBotManager extends ListenerAdapter {
         event.getHook().editOriginal(sb.toString()).queue();
     }
 
+    private void handleVisibilityCommand(SlashCommandInteractionEvent event) {
+        String discordId = event.getUser().getId();
+        event.deferReply().setEphemeral(true).queue();
+
+        RegisteredUser reg = RegistrationStore.getInstance().getByDiscordId(discordId);
+        if (reg == null) {
+            event.getHook().editOriginal("❌ You must be registered to use visibility settings. Use `/register` first.").queue();
+            return;
+        }
+
+        String message = buildVisibilityMessage(reg);
+        List<Button> buttons = buildVisibilityButtons(reg);
+        
+        event.getHook().editOriginal(message)
+                .setActionRow(buttons.get(0), buttons.get(1), buttons.get(2))
+                .queue();
+    }
+
+    private void handleVisibilityButton(ButtonInteractionEvent event) {
+        String discordId = event.getUser().getId();
+        String buttonId = event.getComponentId();
+
+        RegisteredUser reg = RegistrationStore.getInstance().getByDiscordId(discordId);
+        if (reg == null) {
+            event.reply("❌ Registration not found.").setEphemeral(true).queue();
+            return;
+        }
+
+        // Toggle the appropriate setting
+        boolean newValue = false;
+        switch (buttonId) {
+            case "visibility_joinleave":
+                newValue = !reg.isShowJoinLeave();
+                reg.setShowJoinLeave(newValue);
+                break;
+            case "visibility_chat":
+                newValue = !reg.isShowChat();
+                reg.setShowChat(newValue);
+                break;
+            case "visibility_deaths":
+                newValue = !reg.isShowDeaths();
+                reg.setShowDeaths(newValue);
+                break;
+            default:
+                event.reply("❌ Unknown button.").setEphemeral(true).queue();
+                return;
+        }
+
+        // Save the updated registration
+        RegistrationStore.getInstance().updateUser(reg);
+
+        // Update the message with new button states
+        String message = buildVisibilityMessage(reg);
+        List<Button> buttons = buildVisibilityButtons(reg);
+        
+        event.editMessage(message)
+                .setActionRow(buttons.get(0), buttons.get(1), buttons.get(2))
+                .queue();
+        
+        LOGGER.info("Updated visibility settings for " + reg.getMinecraftUsername() + " (" + reg.getDiscordName() + ")");
+    }
+
+    private String buildVisibilityMessage(RegisteredUser reg) {
+        return String.format("**Visibility Settings for %s**\n\n" +
+                "Control what gets posted to Discord:\n" +
+                "• **Join/Leave**: %s\n" +
+                "• **Chat Messages**: %s\n" +
+                "• **Deaths/Mobs**: %s\n\n" +
+                "Click a button to toggle.",
+                reg.getMinecraftUsername(),
+                reg.isShowJoinLeave() ? "🟢 Visible" : "🔴 Hidden",
+                reg.isShowChat() ? "🟢 Visible" : "🔴 Hidden",
+                reg.isShowDeaths() ? "🟢 Visible" : "🔴 Hidden"
+        );
+    }
+
+    private List<Button> buildVisibilityButtons(RegisteredUser reg) {
+        Button joinLeaveBtn = reg.isShowJoinLeave() 
+                ? Button.success("visibility_joinleave", "Join/Leave: ON")
+                : Button.danger("visibility_joinleave", "Join/Leave: OFF");
+        
+        Button chatBtn = reg.isShowChat()
+                ? Button.success("visibility_chat", "Chat: ON")
+                : Button.danger("visibility_chat", "Chat: OFF");
+        
+        Button deathsBtn = reg.isShowDeaths()
+                ? Button.success("visibility_deaths", "Deaths: ON")
+                : Button.danger("visibility_deaths", "Deaths: OFF");
+        
+        return List.of(joinLeaveBtn, chatBtn, deathsBtn);
+    }
+
     public void sendMinecraftChatToDiscord(ServerPlayerEntity player, String messageBody) {
         if (jda == null) return;
 
         String playerName = player.getName().getString();
         RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
+
+        // Check visibility preferences for registered players
+        if (reg != null && !reg.isShowChat()) {
+            LOGGER.debug("Suppressed chat message for " + playerName + " (visibility setting)");
+            return;
+        }
 
         // If registered and webhook configured, use webhook to impersonate but do it off-thread
         if (reg != null && config.getDiscordWebhookUrl() != null && !config.getDiscordWebhookUrl().isEmpty()) {

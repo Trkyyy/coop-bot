@@ -2,6 +2,7 @@ package com.coop.bot;
 
 import com.coop.bot.config.ModConfig;
 import com.coop.bot.objects.DeathRecord;
+import com.coop.bot.objects.RegisteredUser;
 import  net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
@@ -45,6 +46,14 @@ public class EventListener {
 
     private static void onPlayerJoin(ServerPlayerEntity player) {
         String playerName = player.getName().getString();
+        
+        // Check visibility preferences for registered players
+        RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
+        if (reg != null && !reg.isShowJoinLeave()) {
+            LOGGER.debug("Suppressed join message for " + playerName + " (visibility setting)");
+            return;
+        }
+        
         String message = config.getJoinMessageFormat()
                 .replace("{player}", playerName);
 
@@ -58,6 +67,14 @@ public class EventListener {
 
     private static void onPlayerLeave(ServerPlayerEntity player) {
         String playerName = player.getName().getString();
+        
+        // Check visibility preferences for registered players
+        RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
+        if (reg != null && !reg.isShowJoinLeave()) {
+            LOGGER.debug("Suppressed leave message for " + playerName + " (visibility setting)");
+            return;
+        }
+        
         String message = config.getLeaveMessageFormat()
                 .replace("{player}", playerName);
 
@@ -76,6 +93,16 @@ public class EventListener {
             boolean shouldSendDeathMessage = deathTracking.recordDeath(deathRecord);
 
             if (shouldSendDeathMessage) {
+                // Check visibility preferences for registered players
+                if (entity instanceof PlayerEntity) {
+                    String playerName = entity.getName().getString();
+                    RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
+                    if (reg != null && !reg.isShowDeaths()) {
+                        LOGGER.debug("Suppressed death message for " + playerName + " (visibility setting)");
+                        return;
+                    }
+                }
+                
                 String deathMessage = DeathTracking.getDeathMessage(entity, source);
                 String message = config.getDeathMessageFormat()
                         .replace("{message}", deathMessage);

@@ -1,6 +1,7 @@
 package com.coop.bot;
 
 import com.coop.bot.objects.DeathRecord;
+import com.coop.bot.objects.RegisteredUser;
 import com.coop.bot.config.ModConfig;
 
 import net.minecraft.entity.Entity;
@@ -409,6 +410,14 @@ public class DeathTracking {
     }
 
     private void sendFarmingSummary(FarmingSession session) {
+        // Check visibility preferences for registered players
+        String killerName = session.getKillerName();
+        RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(killerName);
+        if (reg != null && !reg.isShowDeaths()) {
+            LOGGER.debug("Suppressed farming summary for " + killerName + " (visibility setting)");
+            return;
+        }
+        
         String message = String.format(
                 "<:brasovpog:1411341162111045632> **Farming Complete**\n%s",
                 session.getFormattedSummary()
