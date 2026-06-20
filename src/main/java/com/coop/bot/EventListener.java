@@ -3,14 +3,14 @@ package com.coop.bot;
 import com.coop.bot.config.ModConfig;
 import com.coop.bot.objects.DeathRecord;
 import com.coop.bot.objects.RegisteredUser;
-import  net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.message.SignedMessage;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.chat.PlayerChatMessage;
+import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ public class EventListener {
         LOGGER.info("EventListener registered successfully");
     }
 
-    private static void onPlayerJoin(ServerPlayerEntity player) {
+    private static void onPlayerJoin(ServerPlayer player) {
         String playerName = player.getName().getString();
         
         // Check visibility preferences for registered players
@@ -65,7 +65,7 @@ public class EventListener {
         }
     }
 
-    private static void onPlayerLeave(ServerPlayerEntity player) {
+    private static void onPlayerLeave(ServerPlayer player) {
         String playerName = player.getName().getString();
         
         // Check visibility preferences for registered players
@@ -94,7 +94,7 @@ public class EventListener {
 
             if (shouldSendDeathMessage) {
                 // Check visibility preferences for registered players
-                if (entity instanceof PlayerEntity) {
+                if (entity instanceof Player) {
                     String playerName = entity.getName().getString();
                     RegisteredUser reg = RegistrationStore.getInstance().getByMinecraft(playerName);
                     if (reg != null && !reg.isShowDeaths()) {
@@ -108,7 +108,7 @@ public class EventListener {
                         .replace("{message}", deathMessage);
 
                 String coords = "";
-                if (entity instanceof PlayerEntity){
+                if (entity instanceof ServerPlayer) {
                     coords = deathRecord.getDeathLocation();
                 }
 
@@ -125,8 +125,8 @@ public class EventListener {
         }
     }
 
-    public static void onChatMessage(SignedMessage message, ServerPlayerEntity sender){
-        String messageBody = message.getContent().getString();
+    public static void onChatMessage(PlayerChatMessage message, ServerPlayer sender){
+        String messageBody = message.decoratedContent().getString();
         String playerName = sender.getName().getString();
 
         try {

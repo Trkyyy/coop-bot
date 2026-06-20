@@ -1,6 +1,6 @@
     package com.coop.bot.objects;
 
-    import net.minecraft.entity.EntityType;
+    import net.minecraft.world.entity.EntityType;
 
     import java.time.Instant;
     import java.util.UUID;
