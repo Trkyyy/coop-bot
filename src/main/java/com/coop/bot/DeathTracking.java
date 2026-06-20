@@ -4,11 +4,12 @@ import com.coop.bot.objects.DeathRecord;
 import com.coop.bot.objects.RegisteredUser;
 import com.coop.bot.config.ModConfig;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.text.Text;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,13 +17,11 @@ import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.*;
 
-import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.world.damagesource.DamageSource;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static net.minecraft.entity.EntityType.*;
 
 
 public class DeathTracking {
@@ -42,43 +41,44 @@ public class DeathTracking {
 
     static {
         // Hostile Mobs (5 XP)
-        XP_VALUES.put(EntityType.ZOMBIE, 5);
-        XP_VALUES.put(EntityType.HUSK, 5);
-        XP_VALUES.put(EntityType.DROWNED, 5);
-        XP_VALUES.put(EntityType.ZOMBIFIED_PIGLIN, 5);
-        XP_VALUES.put(EntityType.ZOGLIN, 5);
-        XP_VALUES.put(EntityType.SKELETON, 5);
-        XP_VALUES.put(EntityType.STRAY, 5);
-        XP_VALUES.put(EntityType.WITHER_SKELETON, 5);
-        XP_VALUES.put(EntityType.CREEPER, 5);
-        XP_VALUES.put(EntityType.SPIDER, 5);
-        XP_VALUES.put(EntityType.CAVE_SPIDER, 5);
-        XP_VALUES.put(EntityType.ENDERMAN, 5);
-        XP_VALUES.put(EntityType.GHAST, 5);
-        XP_VALUES.put(EntityType.PIGLIN, 5);
-        XP_VALUES.put(EntityType.HOGLIN, 5);
-        XP_VALUES.put(EntityType.VINDICATOR, 5);
-        XP_VALUES.put(EntityType.PILLAGER, 5);
-        XP_VALUES.put(EntityType.WITCH, 5);
-        XP_VALUES.put(EntityType.PHANTOM, 5);
-        XP_VALUES.put(EntityType.SHULKER, 5);
+        XP_VALUES.put(EntityTypes.ZOMBIE, 5);
+        XP_VALUES.put(EntityTypes.HUSK, 5);
+        XP_VALUES.put(EntityTypes.DROWNED, 5);
+        XP_VALUES.put(EntityTypes.ZOMBIFIED_PIGLIN, 5);
+        XP_VALUES.put(EntityTypes.ZOGLIN, 5);
+        XP_VALUES.put(EntityTypes.SKELETON, 5);
+        XP_VALUES.put(EntityTypes.STRAY, 5);
+        XP_VALUES.put(EntityTypes.WITHER_SKELETON, 5);
+        XP_VALUES.put(EntityTypes.CREEPER, 5);
+        XP_VALUES.put(EntityTypes.SPIDER, 5);
+        XP_VALUES.put(EntityTypes.CAVE_SPIDER, 5);
+        XP_VALUES.put(EntityTypes.ENDERMAN, 5);
+        XP_VALUES.put(EntityTypes.GHAST, 5);
+        XP_VALUES.put(EntityTypes.PIGLIN, 5);
+        XP_VALUES.put(EntityTypes.HOGLIN, 5);
+        XP_VALUES.put(EntityTypes.VINDICATOR, 5);
+        XP_VALUES.put(EntityTypes.PILLAGER, 5);
+        XP_VALUES.put(EntityTypes.WITCH, 5);
+        XP_VALUES.put(EntityTypes.PHANTOM, 5);
+        XP_VALUES.put(EntityTypes.SHULKER, 5);
 
         // 10 XP mobs
-        XP_VALUES.put(EntityType.BLAZE, 10);
-        XP_VALUES.put(EntityType.GUARDIAN, 10);
-        XP_VALUES.put(EntityType.ELDER_GUARDIAN, 10);
-        XP_VALUES.put(EntityType.EVOKER, 10);
+        XP_VALUES.put(EntityTypes.BLAZE, 10);
+        XP_VALUES.put(EntityTypes.GUARDIAN, 10);
+        XP_VALUES.put(EntityTypes.ELDER_GUARDIAN, 10);
+        XP_VALUES.put(EntityTypes.EVOKER, 10);
 
         // Special XP values
-        XP_VALUES.put(EntityType.PIGLIN_BRUTE, 20);
-        XP_VALUES.put(EntityType.ENDERMITE, 3);
-        XP_VALUES.put(EntityType.SILVERFISH, 5);
-        XP_VALUES.put(EntityType.RAVAGER, 20);
-        XP_VALUES.put(EntityType.WITHER, 50);
-        XP_VALUES.put(EntityType.ENDER_DRAGON, 12000);
-        XP_VALUES.put(EntityType.WARDEN, 5);
-        XP_VALUES.put(EntityType.MAGMA_CUBE, 2);
-        XP_VALUES.put(EntityType.SLIME, 2);
+        XP_VALUES.put(EntityTypes.PIGLIN_BRUTE, 20);
+        XP_VALUES.put(EntityTypes.ENDERMITE, 3);
+        XP_VALUES.put(EntityTypes.SILVERFISH, 5);
+        XP_VALUES.put(EntityTypes.RAVAGER, 20);
+        XP_VALUES.put(EntityTypes.WITHER, 50);
+        XP_VALUES.put(EntityTypes.ENDER_DRAGON, 12000);
+        XP_VALUES.put(EntityTypes.WARDEN, 5);
+        XP_VALUES.put(EntityTypes.MAGMA_CUBE, 2);
+        XP_VALUES.put(EntityTypes.SLIME, 2);
+        XP_VALUES.put(EntityTypes.SULFUR_CUBE, 5);
 
         // Note: Size-based mobs (Slime, Magma Cube) need special handling
         // These values are just placeholders
@@ -106,14 +106,14 @@ public class DeathTracking {
 
         return shouldSendDeathMessage;
     }
-
+    
     public static DeathRecord createDeathRecord(LivingEntity entity, DamageSource damageSource) {
         DeathRecord.Builder builder = new DeathRecord.Builder()
-                .entityUUID(entity.getUuid())
+                .entityUUID(entity.getUUID())
                 .entityName(entity.getName().getString())
                 .entityType(entity.getType())
                 .deathMessage(getDeathMessage(entity, damageSource))
-                .damageSource(damageSource.getName());
+                .damageSource(damageSource.type().msgId());
 
         // Get coords
         double x = entity.getX();
@@ -121,18 +121,11 @@ public class DeathTracking {
         double z = entity.getZ();
         String dimension;
 
-        if (entity.getEntityWorld() != null) {
-            dimension = entity.getEntityWorld().getRegistryKey().getValue().toString();
-            switch (dimension) {
-                case "minecraft:overworld":
-                    dimension = "Overworld";
-                    break;
-                case "minecraft:the_nether":
-                    dimension = "Nether";
-                    break;
-                case "minecraft:the_end":
-                    dimension = "End";
-                    break;
+        if (entity.level() != null) {
+            dimension = entity.level().dimension().toString();
+            // Remove namespace if you want just the name
+            if (dimension.startsWith("minecraft:")) {
+                dimension = dimension.substring(10);
             }
             builder.deathLocation(x, y, z, dimension);
         } else {
@@ -140,21 +133,20 @@ public class DeathTracking {
         }
 
         // Handle killer information
-        Entity attacker = damageSource.getAttacker();
+        Entity attacker = damageSource.getEntity();
         if (attacker != null) {
             builder.killerName(attacker.getName().getString());
 
-            if (attacker.getUuid() != null) {
-                builder.killerUUID(attacker.getUuid());
+            if (attacker.getUUID() != null) {
+                builder.killerUUID(attacker.getUUID());
             }
 
             builder.killerType(attacker.getType());
 
-        } else if (damageSource.getSource() != null) {
+        } else if (damageSource.getDirectEntity() != null) {
             // For indirect damage sources (like projectiles, explosions)
-            // TODO: test this deeply
-            builder.killerName(damageSource.getSource().getName().getString());
-            builder.killerType(damageSource.getSource().getType());
+            builder.killerName(damageSource.getDirectEntity().getName().getString());
+            builder.killerType(damageSource.getDirectEntity().getType());
         }
 
         return builder.build();
@@ -194,7 +186,8 @@ public class DeathTracking {
     }
 
     public static String getDeathMessage(LivingEntity entity, DamageSource source){
-        Text deathText = source.getDeathMessage(entity);
+        // Get death message through combat tracker
+        Component deathText = entity.getCombatTracker().getDeathMessage();
         return deathText != null ? deathText.getString() : "died";
     }
 

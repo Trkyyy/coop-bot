@@ -16,10 +16,10 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.ChatFormatting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import com.coop.bot.objects.RegisteredUser;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -249,21 +249,21 @@ public class DiscordBotManager extends ListenerAdapter {
 
             // Create hover text showing the full referenced message
             // (hover text will only appear if the targeted message is moused over (the entire message))
-            Text hoverText = Text.literal("Replying to " + referencedAuthor + ": " + truncatedRefMessage)
-                    .formatted(Formatting.GRAY);
+            Component hoverText = Component.literal("Replying to " + referencedAuthor + ": " + truncatedRefMessage)
+                    .withStyle(ChatFormatting.GRAY);
 
             HoverEvent hoverEvent = new HoverEvent.ShowText(hoverText);
 
             // Apply the hover event to the text
-            MutableText mainText = Text.literal(formatted)
-                    .styled(style -> style.withHoverEvent(hoverEvent));
+            MutableComponent mainText = Component.literal(formatted)
+                .withStyle(style -> style.withHoverEvent(hoverEvent));
 
-            minecraftServer.getPlayerManager().broadcast(mainText, false);
+            minecraftServer.getPlayerList().broadcastSystemMessage(mainText, false);
 
         } else {
             formatted = String.format("§9[Discord] §7%s: §f%s", author, message);
-            minecraftServer.getPlayerManager().broadcast(
-                    Text.literal(formatted),
+            minecraftServer.getPlayerList().broadcastSystemMessage(
+                    Component.literal(formatted),
                     false
             );
         }
@@ -445,7 +445,7 @@ public class DiscordBotManager extends ListenerAdapter {
         return List.of(joinLeaveBtn, chatBtn, deathsBtn);
     }
 
-    public void sendMinecraftChatToDiscord(ServerPlayerEntity player, String messageBody) {
+    public void sendMinecraftChatToDiscord(ServerPlayer player, String messageBody) {
         if (jda == null) return;
 
         String playerName = player.getName().getString();
@@ -519,8 +519,8 @@ public class DiscordBotManager extends ListenerAdapter {
             return "❌ **Server not available**";
         }
 
-        int playerCount = minecraftServer.getPlayerManager().getCurrentPlayerCount();
-        int maxPlayers = minecraftServer.getMaxPlayerCount();
+        int playerCount = minecraftServer.getPlayerList().getPlayerCount();
+        int maxPlayers = minecraftServer.getMaxPlayers();
 
         // FIXED: Use getTicks() and convert to seconds
         String uptimeFormatted = getFormattedUptime();
@@ -529,7 +529,7 @@ public class DiscordBotManager extends ListenerAdapter {
         info.append("### \uD83D\uDC72 Players\n");
         info.append(String.format("-# %s online\n", playerCount));
         if (playerCount > 0) {
-            List<String> players = minecraftServer.getPlayerManager().getPlayerList()
+            List<String> players = minecraftServer.getPlayerList().getPlayers()
                     .stream()
                     .map(p -> p.getName().getString())
                     .collect(Collectors.toList());
@@ -542,7 +542,7 @@ public class DiscordBotManager extends ListenerAdapter {
         info.append("### \uD83E\uDDA4 Status\n");
         info.append(String.format("• `%s` since last unplugging\n", uptimeFormatted));
         info.append(String.format("• Version: `%s`\n",
-                minecraftServer.getVersion()));
+                minecraftServer.getServerVersion()));
 
         return info.toString();
     }
