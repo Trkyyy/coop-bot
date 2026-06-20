@@ -122,11 +122,40 @@ public class DeathTracking {
         String dimension;
 
         if (entity.level() != null) {
-            dimension = entity.level().dimension().toString();
-            // Remove namespace if you want just the name
+            String dimString = entity.level().dimension().toString();
+            // Extract from "ResourceKey[minecraft:dimension / minecraft:overworld]"
+            int lastSlash = dimString.lastIndexOf('/');
+            if (lastSlash != -1) {
+                dimension = dimString.substring(lastSlash + 1).trim();
+                if (dimension.endsWith("]")) {
+                    dimension = dimension.substring(0, dimension.length() - 1);
+                }
+            } else {
+                dimension = "unknown";
+            }
             if (dimension.startsWith("minecraft:")) {
                 dimension = dimension.substring(10);
             }
+            
+            // Format dimension names with proper capitalization
+            switch (dimension) {
+                case "overworld":
+                    dimension = "the Overworld";
+                    break;
+                case "the_nether":
+                    dimension = "the Nether";
+                    break;
+                case "the_end":
+                    dimension = "the End";
+                    break;
+                default:
+                    // For custom dimensions, keep as-is but capitalize first letter
+                    if (dimension.length() > 0) {
+                        dimension = Character.toUpperCase(dimension.charAt(0)) + dimension.substring(1);
+                    }
+                    break;
+            }
+            
             builder.deathLocation(x, y, z, dimension);
         } else {
             builder.deathLocation(x, y, z);
