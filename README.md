@@ -45,8 +45,8 @@ The mod writes/reads a JSON config file at `config/coop-bot.json`. The following
   "discordBotToken": "",
   "joinMessageFormat": "🔥 {player} joined the server.",
   "leaveMessageFormat": "🔴 {player} left the server.",
-  "deathMessageFormat": "💀 {message}",
-  "chatMessageFormat": "👲 {player}: {message}",
+  "deathMessageFormat": "{message}{coords}",
+  "chatMessageFormat": "{player}: {message}",
   "discordChannelId": "",
   "discordMobChannelId": "",
   "discordToMinecraftFormat": "[Discord] {user}: {message}",
@@ -89,6 +89,7 @@ The bot now supports the following slash commands (registered into the configure
 - `/register minecraft_username:<name>` — Register your Discord account to a Minecraft username. When that Minecraft player sends chat, messages will be posted using your Discord name and avatar (requires `discordWebhookUrl` to be set to impersonate the user via webhook).
 - `/registrations` — List all current registrations (ephemeral reply).
 - `/unregister minecraft_username:<name>` — Remove a registration for a Minecraft username (can only be removed by the Discord account that registered it).
+- `/visibility` - Allows a registered user to configure their activity visibility settings
 
 Notes:
 
