@@ -94,6 +94,9 @@ public class DiscordBotManager extends ListenerAdapter {
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         // Could simplify this to if statement, but it seems likely to be expanded, so I will stick with it
         switch (event.getName()) {
+            case "help":
+                handleHelpCommand(event);
+                break;
             case "info":
                 handleInfoCommand(event);
                 break;
@@ -129,6 +132,7 @@ public class DiscordBotManager extends ListenerAdapter {
             if (channel != null) {
                 channel.getGuild().updateCommands()
                         .addCommands(
+                                Commands.slash("help", "Show all available bot commands and functionality"),
                                 Commands.slash("info", "Show server information"),
                                 Commands.slash("registrations", "List all registered Minecraft usernames"),
                                 Commands.slash("register", "Register your Minecraft username").addOption(OptionType.STRING, "minecraft_username", "Your Minecraft username", true),
@@ -351,6 +355,18 @@ public class DiscordBotManager extends ListenerAdapter {
         });
 
         event.getHook().editOriginal(sb.toString()).queue();
+    }
+
+    private void handleHelpCommand(SlashCommandInteractionEvent event) {
+        String help = "**Coop Bot** relays chat, join/leave events, deaths, etc from Minecraft to Discord and vice versa. <:plus10charisma:703249685535522928> \n\n" +
+                "**Commands**\n" +
+                "`/help` — Show this message\n" +
+                "`/info` — Show live server info (online players, uptime, version)\n" +
+                "`/register <username>` — Link your Discord account to a Minecraft username \n" +
+                "`/unregister <username>` — Unlink your Minecraft username\n" +
+                "`/registrations` — List all Discord ↔ Minecraft account links\n" +
+                "`/visibility` — Toggle which events are posted to Discord for you (joins/leaves, chat, deaths)";
+        event.reply(help).setEphemeral(true).queue();
     }
 
     private void handleVisibilityCommand(SlashCommandInteractionEvent event) {
